@@ -4,22 +4,28 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.media.audiofx.AcousticEchoCanceler;
+import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class RecordClient {
     static final int frequency = 44100;
-    //static final int channelConfiguration = AudioFormat.CHANNEL_IN_STEREO;
-    static final int channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_MONO;
+    static final int channelConfiguration = AudioFormat.CHANNEL_IN_MONO;
     static final int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
     boolean isRecording;
     int recBufSize;
@@ -27,20 +33,25 @@ public class RecordClient {
     AudioRecord audioRecord;
 
     public RecordClient(final Context ctx, final String ip, final int port) {
-        recBufSize = AudioRecord.getMinBufferSize(frequency, channelConfiguration, audioEncoding);
+        //recBufSize = AudioRecord.getMinBufferSize(frequency, channelConfiguration, audioEncoding);
+        recBufSize = AudioRecord.getMinBufferSize(
+                frequency,
+                channelConfiguration,
+                audioEncoding
+        ) * 2;
         if (ActivityCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            audioRecord = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, frequency, channelConfiguration, audioEncoding, recBufSize);
+            audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, frequency, channelConfiguration, audioEncoding, recBufSize);
             AcousticEchoCanceler myAcousticCanceler = AcousticEchoCanceler.create(audioRecord.getAudioSessionId());
             AcousticEchoCanceler.create(audioRecord.getAudioSessionId());
             myAcousticCanceler.setEnabled(true);
 
             new Thread() {
-                byte[] buffer = new byte[recBufSize];
                 public void run() {
-                    //Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-                    //android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+                    Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
                     try {
                         connfd = new Socket(ip, port);
+                        connfd.setTcpNoDelay(true);
                     } catch (Exception e) {
                         e.printStackTrace();
                         Intent intent = new Intent().setAction("recordClientStream.ERROR").putExtra("msg", e.toString());
@@ -48,12 +59,38 @@ public class RecordClient {
                         return;
                     }
 
+                    /*
+                    AssetFileDescriptor afd = ctx.getResources().openRawResourceFd(R.raw.sample);
+                    FileInputStream fis = null;
+                    try {
+                        fis = afd.createInputStream();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    */
+
+                    //byte[] buffer = new byte[3000];
+                    byte[] buffer = new byte[recBufSize];
+
                     audioRecord.startRecording();
                     isRecording = true;
                     while (isRecording) {
-                        int readSize = audioRecord.read(buffer, 0, recBufSize);
+                        int readSize;
+
                         try {
-                            connfd.getOutputStream().write(buffer, 0, readSize);
+
+                            /*
+                            while ((readSize = audioRecord.read(buffer, 0, buffer.length)) > 0) {
+                                connfd.getOutputStream().write(buffer, 0, readSize);
+                            }
+                            */
+
+                            //connfd.getOutputStream().write(buffer, 0, readSize);
+
+                            readSize = audioRecord.read(buffer, 0, buffer.length);
+                            if (readSize > 0) {
+                                connfd.getOutputStream().write(buffer, 0, readSize);
+                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                             Intent intent = new Intent().setAction("recordClientStream.ERROR").putExtra("msg", e.toString());

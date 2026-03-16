@@ -48,8 +48,8 @@ public class PlaybackClient {
             byte[] buffer = new byte[playBufSize];
             //byte[] buffer = new byte[1000];
             public void run() {
-                //Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-                //android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+                Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
                 try {
                     connfd = new Socket(ip, port);
                 } catch (Exception e) {

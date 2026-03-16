@@ -34,8 +34,9 @@
                 android:text="START CALL"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
-            <androidx.appcompat.widget.LinearLayoutCompat
 
+
+            <androidx.appcompat.widget.LinearLayoutCompat
                 android:padding="10dp"
                 android:orientation="vertical"
                 android:layout_width="match_parent"
@@ -49,6 +50,7 @@
                     android:layout_height="wrap_content"/>
 
                 <androidx.appcompat.widget.LinearLayoutCompat
+                    android:visibility="gone"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
                     <TextView
@@ -56,6 +58,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"/>
                     <EditText
+                        android:enabled="false"
                         android:id="@+id/edt_record_client"
                         android:layout_weight="1"
                         android:text="192.168.7.140"
@@ -78,7 +81,7 @@
                         android:imeOptions="actionDone"
                         android:id="@+id/edt_record_port"
                         android:layout_marginStart="20dp"
-                        android:text="2241"
+                        android:text="5050"
                         android:layout_width="100dp"
                         android:layout_height="wrap_content"/>
                 </androidx.appcompat.widget.LinearLayoutCompat>
@@ -86,6 +89,7 @@
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/btn_start_record_client"
                     android:layout_marginTop="20dp"
+                    android:visibility="gone"
                     android:text="START RECORD CLIENT"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -99,6 +103,7 @@
                     android:layout_height="wrap_content"/>
 
                 <androidx.appcompat.widget.LinearLayoutCompat
+                    android:visibility="gone"
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
@@ -108,6 +113,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"/>
                     <EditText
+                        android:enabled="false"
                         android:id="@+id/edt_playback_client"
                         android:layout_weight="1"
                         android:text="192.168.7.140"
@@ -129,7 +135,7 @@
                     <EditText
                         android:id="@+id/edt_playback_client_port"
                         android:layout_weight="1"
-                        android:text="2240"
+                        android:text="5000"
                         android:inputType="number"
                         android:imeOptions="actionDone"
                         android:layout_width="match_parent"
@@ -137,6 +143,7 @@
                 </androidx.appcompat.widget.LinearLayoutCompat>
 
                 <androidx.appcompat.widget.AppCompatButton
+                    android:visibility="gone"
                     android:id="@+id/btn_playback_client"
                     android:layout_marginTop="20dp"
                     android:text="START PLAYBACK CLIENT"

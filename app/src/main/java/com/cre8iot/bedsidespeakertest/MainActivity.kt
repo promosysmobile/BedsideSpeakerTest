@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Environment
@@ -16,8 +17,6 @@ import android.text.format.Formatter
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.SeekBar
-import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -35,10 +34,12 @@ class MainActivity : AppCompatActivity(),AudioManager.OnAudioFocusChangeListener
 
     private lateinit var binding: ActivityMainBinding
 
-    private var recordIP = "192.168.7.140"
+    //"22.40.0.172"
+    //"22.40.0.33"
+    //private var recordIP = "22.40.0.226"
     private var recordPort = 5050
 
-    private var playbackIP = "192.168.7.140"
+    //private var playbackIP = "22.40.0.226"
     private var playbackPort = 5000
 
     //private lateinit var mss:MediaStreamServer
@@ -46,8 +47,8 @@ class MainActivity : AppCompatActivity(),AudioManager.OnAudioFocusChangeListener
     private lateinit var recordClient: RecordClient
     private lateinit var audioManager:AudioManager
 
-    private var myIpAddress = "192.168.7.140"
-    private var sendIpAddress = "192.168.7.140"
+    private var myIpAddress = "22.40.0.226"
+    private var sendIpAddress = "22.40.0.226"
 
     private lateinit var audioTcpClient: TcpClient
 
@@ -61,51 +62,61 @@ class MainActivity : AppCompatActivity(),AudioManager.OnAudioFocusChangeListener
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
 
-        binding.edtPlaybackClient.setText(recordIP)
-        binding.edtRecordClient.setText(playbackIP)
+        //binding.edtPlaybackClient.setText(recordIP)
+        //binding.edtRecordClient.setText(playbackIP)
         binding.edtPlaybackClientPort.setText(playbackPort.toString())
         binding.edtRecordPort.setText(recordPort.toString())
 
         binding.edtDesktopIp.setText(myIpAddress)
 
         binding.btnStartCall.setOnClickListener {
+            //val mediaPlayer: MediaPlayer = MediaPlayer.create(this, R.raw.sample)
+            //mediaPlayer.start()
+
+            myIpAddress = binding.edtDesktopIp.text.toString()
+            recordPort = binding.edtRecordPort.text.toString().toInt()
+            playbackPort = binding.edtPlaybackClientPort.text.toString().toInt()
+
             Log.i("MainActivity","myIpAddress: $myIpAddress")
             if( binding.btnStartCall.text.equals("START CALL")){
                 binding.btnStartCall.setText("CANCEL CALL")
+
                 sendCall("|SEVT|13.22.255.1|192.168.7.122|BED-WA|03|-|-|-|-|-|-|-|-|-|")
 
                 recordPort = Integer.valueOf(binding.edtRecordPort.getText().toString())
-                recordClient = RecordClient(applicationContext, recordIP,recordPort)
+                recordClient = RecordClient(applicationContext, myIpAddress,recordPort)
 
-                playbackIP = binding.edtPlaybackClient.getText().toString()
+                //playbackIP = binding.edtPlaybackClient.getText().toString()
                 playbackPort = Integer.valueOf(binding.edtPlaybackClientPort.getText().toString())
                 playbackClient = PlaybackClient(
                     applicationContext,
-                    playbackIP,
+                    myIpAddress,
                     playbackPort
                 )
                 binding.textView1.append("Starting clients\n")
             }else{
                 binding.btnStartCall.setText("START CALL")
                 sendCall("|SEVT|13.22.255.1|192.168.7.122|BED-WA|01|-|-|-|-|-|-|-|-|-|")
+
                 recordClient.stop()
                 playbackClient.stop()
 
                 binding.textView1.append("Stopping clients\n")
             }
 
+
         }
 
         binding.btnStartRecordClient.setOnClickListener {
-            recordIP = binding.edtPlaybackClient.text.toString()
-            playbackIP = binding.edtRecordClient.text.toString()
+            //recordIP = binding.edtPlaybackClient.text.toString()
+            //playbackIP = binding.edtRecordClient.text.toString()
 
             if (binding.btnStartRecordClient.getText().toString().equals("START RECORD CLIENT")) {
                 binding.btnStartRecordClient.setText("STOP RECORD CLIENT")
 
                 recordPort = Integer.valueOf(binding.edtRecordPort.getText().toString())
                 binding.textView1.append("Starting server\n")
-                recordClient = RecordClient(applicationContext, recordIP,recordPort)
+                recordClient = RecordClient(applicationContext, myIpAddress,recordPort)
                 //mss = MediaStreamServer(applicationContext, recordPort)
 
             } else if (binding.btnStartRecordClient.getText().toString().equals("STOP RECORD CLIENT")) {
@@ -124,13 +135,13 @@ class MainActivity : AppCompatActivity(),AudioManager.OnAudioFocusChangeListener
             if (binding.btnPlaybackClient.getText().toString().equals("START PLAYBACK CLIENT")) {
                 binding.btnPlaybackClient.setText("STOP PLAYBACK CLIENT")
 
-                playbackIP = binding.edtPlaybackClient.getText().toString()
+                //playbackIP = binding.edtPlaybackClient.getText().toString()
                 playbackPort = Integer.valueOf(binding.edtPlaybackClientPort.getText().toString())
 
-                binding.textView1.append("""Starting client, ${playbackIP.toString()}:$playbackPort""".trimIndent())
+                binding.textView1.append("""Starting client, ${myIpAddress.toString()}:$playbackPort""".trimIndent())
                 playbackClient = PlaybackClient(
                     applicationContext,
-                    playbackIP,
+                    myIpAddress,
                     playbackPort
                 )
             }else if(binding.btnPlaybackClient.getText().toString().equals("STOP PLAYBACK CLIENT")){
@@ -175,15 +186,15 @@ class MainActivity : AppCompatActivity(),AudioManager.OnAudioFocusChangeListener
         hideKeyboardFrom(applicationContext,binding.root)
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        //audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION)
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION)
         //audioManager.isSpeakerphoneOn = true
-
         //createLogFile()
 
     }
 
     private fun sendCall(strMessage:String) = GlobalScope.launch(Dispatchers.IO) {
-        /*
+        Log.e("TcpServerService","strMessage: $strMessage")
+        Log.e("TcpServerService","sendIpAddress: $sendIpAddress")
         try {
             audioTcpClient = TcpClient(object : TcpClient.OnMessageReceived {
                 override fun messageReceived(message: String?) {
@@ -206,14 +217,13 @@ class MainActivity : AppCompatActivity(),AudioManager.OnAudioFocusChangeListener
                 override fun sendingStatus(isSend: Boolean) {
                     Log.i("ViewModel","isSend: $isSend")
                 }
-            },"#CONNECT#\r\n",sendIpAddress,1884)
+            },"|SEVT|13.22.255.1|192.168.7.122|BED-WA|03|-|-|-|-|-|-|-|-|-|\r\n",sendIpAddress,1884)
 
             audioTcpClient.run()
 
         }catch (exception:Error){
             Log.e("TcpServerService","err: $exception")
         }
-        */
     }
 
     private fun hideKeyboardFrom(context: Context, view: View) {
