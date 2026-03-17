@@ -18,13 +18,14 @@ import androidx.core.app.ActivityCompat;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RecordClient {
-    static final int frequency = 44100;
+    static final int frequency = 16000;
     static final int channelConfiguration = AudioFormat.CHANNEL_IN_MONO;
     static final int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
     boolean isRecording;
@@ -33,7 +34,6 @@ public class RecordClient {
     AudioRecord audioRecord;
 
     public RecordClient(final Context ctx, final String ip, final int port) {
-        //recBufSize = AudioRecord.getMinBufferSize(frequency, channelConfiguration, audioEncoding);
         recBufSize = AudioRecord.getMinBufferSize(
                 frequency,
                 channelConfiguration,
@@ -49,6 +49,59 @@ public class RecordClient {
                 public void run() {
                     Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
                     android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+
+                    try {
+                        connfd = new Socket(ip, port);
+                        connfd.setTcpNoDelay(true);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return;
+                    }
+
+                    byte[] buffer = new byte[4096];
+
+                    try {
+                        Thread.sleep(1000);
+                        InputStream fis = ctx.getResources().openRawResource(R.raw.sample3_16k);
+                        fis.skip(44);
+                        int bytesRead;
+                        while ((bytesRead = fis.read(buffer)) != -1) {
+                            connfd.getOutputStream().write(buffer, 0, bytesRead);
+                            Thread.sleep(20);
+                        }
+
+                        fis.close();
+
+                        Log.e("RecordClient","Start record");
+
+                        AcousticEchoCanceler echoCanceler = AcousticEchoCanceler.create(audioRecord.getAudioSessionId());
+                        if (echoCanceler != null) echoCanceler.setEnabled(true);
+
+                        audioRecord.startRecording();
+                        boolean isRecording = true;
+                        while (isRecording) {
+                            int readSize = audioRecord.read(buffer, 0, buffer.length);
+                            if (readSize > 0) {
+                                connfd.getOutputStream().write(buffer, 0, readSize);
+                            }
+                        }
+
+                        audioRecord.stop();
+                        audioRecord.release();
+
+                        connfd.close();
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }.start();
+
+            /*
+            new Thread() {
+                public void run() {
+                    Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
                     try {
                         connfd = new Socket(ip, port);
                         connfd.setTcpNoDelay(true);
@@ -58,35 +111,13 @@ public class RecordClient {
                         ctx.sendBroadcast(intent);
                         return;
                     }
-
-                    /*
-                    AssetFileDescriptor afd = ctx.getResources().openRawResourceFd(R.raw.sample);
-                    FileInputStream fis = null;
-                    try {
-                        fis = afd.createInputStream();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    */
-
-                    //byte[] buffer = new byte[3000];
                     byte[] buffer = new byte[recBufSize];
-
                     audioRecord.startRecording();
                     isRecording = true;
                     while (isRecording) {
                         int readSize;
 
                         try {
-
-                            /*
-                            while ((readSize = audioRecord.read(buffer, 0, buffer.length)) > 0) {
-                                connfd.getOutputStream().write(buffer, 0, readSize);
-                            }
-                            */
-
-                            //connfd.getOutputStream().write(buffer, 0, readSize);
-
                             readSize = audioRecord.read(buffer, 0, buffer.length);
                             if (readSize > 0) {
                                 connfd.getOutputStream().write(buffer, 0, readSize);
@@ -105,8 +136,9 @@ public class RecordClient {
                         e.printStackTrace();
                     }
                 }
-
             }.start();
+
+            */
         }
 
     }
